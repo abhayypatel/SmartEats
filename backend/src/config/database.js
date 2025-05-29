@@ -1,72 +1,57 @@
 const mongoose = require("mongoose");
 
+let isConnected = false;
+
 const connectDB = async () => {
+  // If already connected, return the existing connection
+  if (isConnected) {
+    return;
+  }
+
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
       maxPoolSize: 5, // Reduced for free tier
-      serverSelectionTimeoutMS: 10000, // Increased timeout
+      serverSelectionTimeoutMS: 15000, // Increased timeout
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-      bufferCommands: false, // Disable mongoose buffering
-      bufferMaxEntries: 0, // Disable mongoose buffering
       retryWrites: true,
       w: 'majority',
-      connectTimeoutMS: 10000,
+      connectTimeoutMS: 15000,
       heartbeatFrequencyMS: 10000, // Check connection health
       maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
     });
 
+    isConnected = true;
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
 
     // Handle connection events
     mongoose.connection.on("error", (err) => {
       console.error("❌ MongoDB connection error:", err);
+      isConnected = false;
     });
 
     mongoose.connection.on("disconnected", () => {
       console.log("⚠️ MongoDB disconnected");
+      isConnected = false;
     });
 
     mongoose.connection.on("reconnected", () => {
       console.log("✅ MongoDB reconnected");
+      isConnected = true;
     });
 
     // Handle connection drops for free tier
     mongoose.connection.on('close', () => {
       console.log('🔌 MongoDB connection closed');
+      isConnected = false;
     });
 
-    // Graceful shutdown
-    process.on("SIGINT", async () => {
-      try {
-        await mongoose.connection.close();
-        console.log("📴 MongoDB connection closed through app termination");
-        process.exit(0);
-      } catch (err) {
-        console.error("❌ Error during MongoDB disconnection:", err);
-        process.exit(1);
-      }
-    });
-
-    // Handle process termination
-    process.on("SIGTERM", async () => {
-      try {
-        await mongoose.connection.close();
-        console.log("📴 MongoDB connection closed through SIGTERM");
-        process.exit(0);
-      } catch (err) {
-        console.error("❌ Error during MongoDB disconnection:", err);
-        process.exit(1);
-      }
-    });
-
+    return conn;
   } catch (error) {
     console.error("❌ Database connection failed:", error.message);
+    isConnected = false;
 
-    // Retry connection after delay for free tier cold starts
-    setTimeout(() => {
-      console.log("🔄 Retrying database connection...");
-      connectDB();
-    }, 5000);
+    // Don't retry in serverless - let the request fail and retry on next invocation
+    throw error;
   }
 };
 

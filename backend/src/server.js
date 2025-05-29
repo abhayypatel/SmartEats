@@ -22,7 +22,19 @@ const notificationRoutes = require("./routes/notification");
 
 const app = express();
 
-connectDB();
+// Middleware to ensure database connection for each request
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("Database connection failed:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Database connection failed. Please try again.",
+    });
+  }
+});
 
 app.set("trust proxy", 1);
 
@@ -129,23 +141,26 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log(
-    `🚀 Server running on port ${PORT} in ${process.env.NODE_ENV} mode`,
-  );
-});
+// Only start server if not in serverless environment
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  const server = app.listen(PORT, () => {
+    console.log(
+      `🚀 Server running on port ${PORT} in ${process.env.NODE_ENV} mode`,
+    );
+  });
 
-process.on("unhandledRejection", (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  // Close server & exit process
-  server.close(() => {
+  process.on("unhandledRejection", (err, promise) => {
+    console.log(`Error: ${err.message}`);
+    // Close server & exit process
+    server.close(() => {
+      process.exit(1);
+    });
+  });
+
+  process.on("uncaughtException", (err) => {
+    console.log(`Error: ${err.message}`);
     process.exit(1);
   });
-});
-
-process.on("uncaughtException", (err) => {
-  console.log(`Error: ${err.message}`);
-  process.exit(1);
-});
+}
 
 module.exports = app;

@@ -15,10 +15,13 @@ const router = express.Router();
 
 router.use(protect);
 
-router.route("/").get(getMeals).post(createMeal);
-router.route("/:id").get(getMealById).put(updateMeal).delete(deleteMeal);
+// Specific routes MUST come before parameterized routes
+router.get("/streak", getStreak);
 router.get("/summary/daily/:date?", getDailySummary);
 router.get("/summary/weekly", getWeeklySummary);
-router.get("/streak", getStreak);
+
+// General CRUD routes (parameterized routes come last)
+router.route("/").get(getMeals).post(createMeal);
+router.route("/:id").get(getMealById).put(updateMeal).delete(deleteMeal);
 
 module.exports = router;
