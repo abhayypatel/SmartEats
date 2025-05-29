@@ -6,6 +6,8 @@ SmartEats is a mobile-first calorie tracking app that uses AI to analyze food ph
 
 **LIVE DEMO**: [CLICK HERE](https://smarteats-delta.vercel.app/)
 
+> **📢 Live Demo Notice:** This app runs on free hosting, so it might be a bit slow at first (30-60 seconds to load). If something doesn't work right away, just wait a bit and try again. Sometimes you might need to click a button twice because of the free hosting limits.
+
 ---
 
 ## 🔍 Features
