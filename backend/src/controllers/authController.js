@@ -66,15 +66,18 @@ const register = asyncHandler(async (req, res) => {
     });
   }
 
+  const defaultBirthDate = new Date();
+  defaultBirthDate.setFullYear(defaultBirthDate.getFullYear() - 25);
+
   const user = await User.create({
     email,
     password,
     firstName,
     lastName,
-    dateOfBirth,
-    gender,
-    height,
-    weight,
+    dateOfBirth: dateOfBirth || defaultBirthDate,
+    gender: gender || "prefer-not-to-say",
+    height: height || { value: 170, unit: "cm" },
+    weight: weight || { value: 70, unit: "kg" },
     activityLevel: activityLevel || "moderately-active",
     goals: {
       weightGoal: goals?.weightGoal || "maintain",

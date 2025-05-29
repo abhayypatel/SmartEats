@@ -42,19 +42,23 @@ const userSchema = new mongoose.Schema(
     },
     dateOfBirth: {
       type: Date,
-      required: [true, "Date of birth is required"],
+      default: function () {
+        const date = new Date();
+        date.setFullYear(date.getFullYear() - 25);
+        return date;
+      },
     },
     gender: {
       type: String,
       enum: ["male", "female", "other", "prefer-not-to-say"],
-      required: [true, "Gender is required"],
+      default: "prefer-not-to-say",
     },
 
     // Physical Information
     height: {
       value: {
         type: Number,
-        required: [true, "Height is required"],
+        default: 170,
         min: [50, "Height must be at least 50 cm"],
       },
       unit: {
@@ -66,7 +70,7 @@ const userSchema = new mongoose.Schema(
     weight: {
       value: {
         type: Number,
-        required: [true, "Weight is required"],
+        default: 70,
         min: [20, "Weight must be at least 20 kg"],
       },
       unit: {
@@ -84,7 +88,6 @@ const userSchema = new mongoose.Schema(
         "very-active",
         "extremely-active",
       ],
-      required: [true, "Activity level is required"],
       default: "moderately-active",
     },
 
@@ -93,7 +96,6 @@ const userSchema = new mongoose.Schema(
       weightGoal: {
         type: String,
         enum: ["lose", "maintain", "gain"],
-        required: [true, "Weight goal is required"],
         default: "maintain",
       },
       targetWeight: {
@@ -112,7 +114,7 @@ const userSchema = new mongoose.Schema(
       },
       dailyCalories: {
         type: Number,
-        required: [true, "Daily calorie goal is required"],
+        default: 2000,
         min: [800, "Daily calories must be at least 800"],
         max: [5000, "Daily calories cannot exceed 5000"],
       },

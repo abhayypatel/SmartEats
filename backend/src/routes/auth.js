@@ -35,14 +35,23 @@ const registerValidation = [
     .isLength({ min: 1 })
     .withMessage("Last name is required"),
   body("dateOfBirth")
+    .optional()
     .isISO8601()
     .withMessage("Please provide a valid date of birth"),
   body("gender")
+    .optional()
     .isIn(["male", "female", "other", "prefer-not-to-say"])
     .withMessage("Please select a valid gender"),
-  body("height.value").isNumeric().withMessage("Height must be a number"),
-  body("weight.value").isNumeric().withMessage("Weight must be a number"),
+  body("height.value")
+    .optional()
+    .isNumeric()
+    .withMessage("Height must be a number"),
+  body("weight.value")
+    .optional()
+    .isNumeric()
+    .withMessage("Weight must be a number"),
   body("goals.dailyCalories")
+    .optional()
     .isNumeric()
     .withMessage("Daily calories must be a number"),
 ];
