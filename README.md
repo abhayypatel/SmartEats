@@ -4,7 +4,7 @@ SmartEats is a mobile-first calorie tracking app that uses AI to analyze food ph
 
 [![SmartEats](https://img.shields.io/badge/SmartEats-AI%20Calorie%20Tracker-4F46E5?style=for-the-badge)](https://github.com/yourusername/smarteats)
 
-**LIVE DEMO**: [Coming Soon](#)
+**LIVE DEMO**: [CLICK HERE](https://smarteats-delta.vercel.app/)
 
 ---
 
