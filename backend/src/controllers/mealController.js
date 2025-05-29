@@ -66,14 +66,24 @@ const createMeal = asyncHandler(async (req, res) => {
             if (!foodItem) {
                 foodItem = await FoodItem.create({
                     name: food.name,
-                    brand: food.brand || "Custom",
-                    category: "custom",
-                    nutritionPer100g: {
+                    brand: food.brand || "User Added",
+                    category: "prepared-foods",
+                    dataSource: "user-generated",
+                    addedBy: req.user._id,
+                    nutrition: {
                         calories: food.calories || 0,
                         protein: food.protein || 0,
                         carbs: food.carbs || 0,
                         fat: food.fat || 0,
+                        fiber: food.fiber || 0,
+                        sugar: food.sugar || 0,
+                        sodium: food.sodium || 0,
                     },
+                    servingSize: {
+                        amount: food.quantity || 100,
+                        unit: food.unit || "g",
+                        description: "1 serving"
+                    }
                 });
             }
         }
@@ -87,10 +97,13 @@ const createMeal = asyncHandler(async (req, res) => {
                 quantity,
                 unit: food.unit || "g",
                 nutrition: {
-                    calories: Math.round((foodItem.nutritionPer100g.calories || 0) * multiplier * 10) / 10,
-                    protein: Math.round((foodItem.nutritionPer100g.protein || 0) * multiplier * 10) / 10,
-                    carbs: Math.round((foodItem.nutritionPer100g.carbs || 0) * multiplier * 10) / 10,
-                    fat: Math.round((foodItem.nutritionPer100g.fat || 0) * multiplier * 10) / 10,
+                    calories: Math.round((foodItem.nutrition.calories || 0) * multiplier * 10) / 10,
+                    protein: Math.round((foodItem.nutrition.protein || 0) * multiplier * 10) / 10,
+                    carbs: Math.round((foodItem.nutrition.carbs || 0) * multiplier * 10) / 10,
+                    fat: Math.round((foodItem.nutrition.fat || 0) * multiplier * 10) / 10,
+                    fiber: Math.round((foodItem.nutrition.fiber || 0) * multiplier * 10) / 10,
+                    sugar: Math.round((foodItem.nutrition.sugar || 0) * multiplier * 10) / 10,
+                    sodium: Math.round((foodItem.nutrition.sodium || 0) * multiplier * 10) / 10,
                 },
                 notes: food.notes,
             });
@@ -148,14 +161,24 @@ const updateMeal = asyncHandler(async (req, res) => {
                 if (!foodItem) {
                     foodItem = await FoodItem.create({
                         name: food.name,
-                        brand: food.brand || "Custom",
-                        category: "custom",
-                        nutritionPer100g: {
+                        brand: food.brand || "User Added",
+                        category: "prepared-foods",
+                        dataSource: "user-generated",
+                        addedBy: req.user._id,
+                        nutrition: {
                             calories: food.calories || 0,
                             protein: food.protein || 0,
                             carbs: food.carbs || 0,
                             fat: food.fat || 0,
+                            fiber: food.fiber || 0,
+                            sugar: food.sugar || 0,
+                            sodium: food.sodium || 0,
                         },
+                        servingSize: {
+                            amount: food.quantity || 100,
+                            unit: food.unit || "g",
+                            description: "1 serving"
+                        }
                     });
                 }
             }
@@ -169,10 +192,13 @@ const updateMeal = asyncHandler(async (req, res) => {
                     quantity,
                     unit: food.unit || "g",
                     nutrition: {
-                        calories: Math.round((foodItem.nutritionPer100g.calories || 0) * multiplier * 10) / 10,
-                        protein: Math.round((foodItem.nutritionPer100g.protein || 0) * multiplier * 10) / 10,
-                        carbs: Math.round((foodItem.nutritionPer100g.carbs || 0) * multiplier * 10) / 10,
-                        fat: Math.round((foodItem.nutritionPer100g.fat || 0) * multiplier * 10) / 10,
+                        calories: Math.round((foodItem.nutrition.calories || 0) * multiplier * 10) / 10,
+                        protein: Math.round((foodItem.nutrition.protein || 0) * multiplier * 10) / 10,
+                        carbs: Math.round((foodItem.nutrition.carbs || 0) * multiplier * 10) / 10,
+                        fat: Math.round((foodItem.nutrition.fat || 0) * multiplier * 10) / 10,
+                        fiber: Math.round((foodItem.nutrition.fiber || 0) * multiplier * 10) / 10,
+                        sugar: Math.round((foodItem.nutrition.sugar || 0) * multiplier * 10) / 10,
+                        sodium: Math.round((foodItem.nutrition.sodium || 0) * multiplier * 10) / 10,
                     },
                     notes: food.notes,
                 });
@@ -248,7 +274,7 @@ const getWeeklySummary = asyncHandler(async (req, res) => {
 
     meals.forEach(meal => {
         summary.totalCalories += meal.totalNutrition.calories || 0;
-        summary.daysWithMeals.add(meal.formattedDate);
+        summary.daysWithMeals.add(meal.date.toISOString().split('T')[0]);
     });
 
     const daysLogged = summary.daysWithMeals.size;
@@ -266,7 +292,7 @@ const getStreak = asyncHandler(async (req, res) => {
         .select("date")
         .sort({ date: -1 });
 
-    const uniqueDates = [...new Set(meals.map(meal => meal.formattedDate))];
+    const uniqueDates = [...new Set(meals.map(meal => meal.date.toISOString().split('T')[0]))];
     uniqueDates.sort((a, b) => new Date(b) - new Date(a));
 
     let currentStreak = 0;

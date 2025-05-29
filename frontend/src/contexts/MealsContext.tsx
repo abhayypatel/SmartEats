@@ -407,15 +407,63 @@ export function MealsProvider({ children }: { children: ReactNode }) {
 
       const mealPayload = {
         mealType: mealData.type,
-        foods: mealData.items.map((item) => ({
-          name: item.name,
-          calories: item.calories,
-          protein: item.protein,
-          carbs: item.carbs,
-          fat: item.fat,
-          quantity: 100,
-          unit: "g",
-        })),
+        foods: await Promise.all(
+          mealData.items.map(async (item) => {
+            try {
+              const foodItemResponse = await apiService.createFood({
+                name: item.name,
+                brand: item.brand || "User Added",
+                category: "prepared-foods",
+                dataSource: "user-generated",
+                nutrition: {
+                  calories: item.calories,
+                  protein: item.protein,
+                  carbs: item.carbs,
+                  fat: item.fat,
+                  fiber: 0,
+                  sugar: 0,
+                  sodium: 0,
+                },
+                servingSize: {
+                  amount: 100,
+                  unit: "g",
+                  description: item.serving_size || "1 serving",
+                },
+              });
+
+              const foodId = (foodItemResponse.data as any)?._id;
+
+              return {
+                foodItem: foodId,
+                quantity: 100,
+                unit: "g",
+                nutrition: {
+                  calories: item.calories,
+                  protein: item.protein,
+                  carbs: item.carbs,
+                  fat: item.fat,
+                  fiber: 0,
+                  sugar: 0,
+                  sodium: 0,
+                },
+              };
+            } catch (error) {
+              console.warn(
+                "Failed to create food item, using fallback:",
+                error,
+              );
+              return {
+                name: item.name,
+                calories: item.calories,
+                protein: item.protein,
+                carbs: item.carbs,
+                fat: item.fat,
+                quantity: 100,
+                unit: "g",
+              };
+            }
+          }),
+        ),
         date: new Date().toISOString(),
         time: new Date().toTimeString().slice(0, 5),
       };
@@ -426,7 +474,7 @@ export function MealsProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Error adding meal:", error);
-      throw error; // Re-throw so UI can show error message
+      throw error;
     }
   };
 

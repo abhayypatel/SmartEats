@@ -184,6 +184,13 @@ class ApiService {
   async searchFood(query: string): Promise<ApiResponse> {
     return this.makeRequest(`/food/search?q=${encodeURIComponent(query)}`);
   }
+
+  async createFood(foodData: any): Promise<ApiResponse> {
+    return this.makeRequest("/food", {
+      method: "POST",
+      body: JSON.stringify(foodData),
+    });
+  }
 }
 
 export const apiService = new ApiService();
