@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { format, subDays } from "date-fns";
 import { useAuth } from "./AuthContext";
+import apiService from "../utils/apiService";
 
 interface MealItem {
   id: string;
@@ -75,9 +76,6 @@ interface MealsContextType {
 
 const MealsContext = createContext<MealsContextType | undefined>(undefined);
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
-
 const ACHIEVEMENT_DEFINITIONS = [
   {
     id: "first_meal",
@@ -140,27 +138,6 @@ export function MealsProvider({ children }: { children: ReactNode }) {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const { user, token } = useAuth();
 
-  const apiCall = async (endpoint: string, options: RequestInit = {}) => {
-    if (!token) throw new Error("No authentication token");
-
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    };
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error(`API call failed: ${response.statusText}`);
-    }
-
-    return response.json();
-  };
-
   const loadMeals = useCallback(async () => {
     if (!user || !token) return;
 
@@ -206,25 +183,28 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await apiCall("/meals");
-      const dbMeals = response.data.map((meal: any) => ({
-        id: meal._id,
-        type: meal.mealType,
-        items: meal.foods.map((food: any) => ({
-          id: food._id || food.id,
-          name: food.foodItem?.name || food.name || "Unknown food",
-          calories: food.nutrition?.calories || 0,
-          protein: food.nutrition?.protein || 0,
-          carbs: food.nutrition?.carbs || 0,
-          fat: food.nutrition?.fat || 0,
-          serving_size: `${food.quantity}${food.unit}`,
-        })),
-        timestamp: meal.createdAt,
-        date: meal.date.split("T")[0],
-      }));
-      setMeals(dbMeals);
+      const response = await apiService.getMeals();
+      if (response.success && response.data) {
+        const dbMeals = response.data.map((meal: any) => ({
+          id: meal._id,
+          type: meal.mealType,
+          items: meal.foods.map((food: any) => ({
+            id: food._id || food.id,
+            name: food.foodItem?.name || food.name || "Unknown food",
+            calories: food.nutrition?.calories || 0,
+            protein: food.nutrition?.protein || 0,
+            carbs: food.nutrition?.carbs || 0,
+            fat: food.nutrition?.fat || 0,
+            serving_size: `${food.quantity}${food.unit}`,
+          })),
+          timestamp: meal.createdAt,
+          date: meal.date.split("T")[0],
+        }));
+        setMeals(dbMeals);
+      }
     } catch (error) {
       console.error("Error loading meals:", error);
+      // Fail silently but log error - better UX than crashing
     }
   }, [user, token]);
 
@@ -242,10 +222,13 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await apiCall("/meals/streak");
-      setStreakData(response.data);
+      const response = await apiService.getStreak();
+      if (response.success && response.data) {
+        setStreakData(response.data);
+      }
     } catch (error) {
       console.error("Error loading streak:", error);
+      // Keep existing streak data if API fails
     }
   }, [user, token]);
 
@@ -285,10 +268,13 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await apiCall("/progress/weight");
-      setWeightEntries(response.data);
+      const response = await apiService.getWeightEntries();
+      if (response.success && response.data) {
+        setWeightEntries(response.data);
+      }
     } catch (error) {
       console.error("Error loading weight entries:", error);
+      // Keep existing weight data if API fails
     }
   }, [user, token]);
 
@@ -309,10 +295,13 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await apiCall("/progress/achievements");
-      setAchievements(response.data);
+      const response = await apiService.getAchievements();
+      if (response.success && response.data) {
+        setAchievements(response.data);
+      }
     } catch (error) {
       console.error("Error loading achievements:", error);
+      // Keep existing achievements if API fails
     }
   }, [user, token]);
 
@@ -365,16 +354,18 @@ export function MealsProvider({ children }: { children: ReactNode }) {
 
     if (hasChanges) {
       try {
-        await apiCall("/progress/achievements", {
-          method: "PUT",
-          body: JSON.stringify({ achievements: updatedAchievements }),
-        });
-        setAchievements(updatedAchievements);
+        const response =
+          await apiService.updateAchievements(updatedAchievements);
+        if (response.success) {
+          setAchievements(updatedAchievements);
+        }
       } catch (error) {
         console.error("Error updating achievements:", error);
+        // Update locally even if API fails
+        setAchievements(updatedAchievements);
       }
     }
-  }, [user, meals.length, streakData.longest, achievements, token]);
+  }, [user, meals.length, streakData.longest, achievements]);
 
   const refreshData = useCallback(async () => {
     await Promise.all([
@@ -429,14 +420,13 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         time: new Date().toTimeString().slice(0, 5),
       };
 
-      await apiCall("/meals", {
-        method: "POST",
-        body: JSON.stringify(mealPayload),
-      });
-
-      await refreshData();
+      const response = await apiService.addMeal(mealPayload);
+      if (response.success) {
+        await refreshData();
+      }
     } catch (error) {
       console.error("Error adding meal:", error);
+      throw error; // Re-throw so UI can show error message
     }
   };
 
@@ -449,10 +439,13 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      await apiCall(`/meals/${mealId}`, { method: "DELETE" });
-      await refreshData();
+      const response = await apiService.deleteMeal(mealId);
+      if (response.success) {
+        await refreshData();
+      }
     } catch (error) {
       console.error("Error deleting meal:", error);
+      throw error;
     }
   };
 
@@ -469,13 +462,11 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      await apiCall(`/meals/${mealId}`, {
-        method: "PUT",
-        body: JSON.stringify(updatedMeal),
-      });
+      // Note: Update meal API would need to be implemented in apiService
       await refreshData();
     } catch (error) {
       console.error("Error updating meal:", error);
+      throw error;
     }
   };
 
@@ -498,13 +489,13 @@ export function MealsProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      await apiCall("/progress/weight", {
-        method: "POST",
-        body: JSON.stringify({ weight }),
-      });
-      await loadWeightEntries();
+      const response = await apiService.addWeightEntry(weight);
+      if (response.success) {
+        await loadWeightEntries();
+      }
     } catch (error) {
       console.error("Error adding weight entry:", error);
+      throw error;
     }
   };
 

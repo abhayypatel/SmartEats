@@ -3,10 +3,16 @@ const mongoose = require("mongoose");
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+      maxPoolSize: 5, // Reduced for free tier
+      serverSelectionTimeoutMS: 10000, // Increased timeout
       socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
       bufferCommands: false, // Disable mongoose buffering
+      bufferMaxEntries: 0, // Disable mongoose buffering
+      retryWrites: true,
+      w: 'majority',
+      connectTimeoutMS: 10000,
+      heartbeatFrequencyMS: 10000, // Check connection health
+      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
     });
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
@@ -24,6 +30,11 @@ const connectDB = async () => {
       console.log("✅ MongoDB reconnected");
     });
 
+    // Handle connection drops for free tier
+    mongoose.connection.on('close', () => {
+      console.log('🔌 MongoDB connection closed');
+    });
+
     // Graceful shutdown
     process.on("SIGINT", async () => {
       try {
@@ -35,9 +46,27 @@ const connectDB = async () => {
         process.exit(1);
       }
     });
+
+    // Handle process termination
+    process.on("SIGTERM", async () => {
+      try {
+        await mongoose.connection.close();
+        console.log("📴 MongoDB connection closed through SIGTERM");
+        process.exit(0);
+      } catch (err) {
+        console.error("❌ Error during MongoDB disconnection:", err);
+        process.exit(1);
+      }
+    });
+
   } catch (error) {
     console.error("❌ Database connection failed:", error.message);
-    process.exit(1);
+
+    // Retry connection after delay for free tier cold starts
+    setTimeout(() => {
+      console.log("🔄 Retrying database connection...");
+      connectDB();
+    }, 5000);
   }
 };
 

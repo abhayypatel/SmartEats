@@ -5,6 +5,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import apiService from "../utils/apiService";
 
 interface User {
   id: string;
@@ -79,9 +80,6 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   }
 }
 
-const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -116,17 +114,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
 
-          const response = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
+          const response = await apiService.getProfile();
+          if (response.success && response.data) {
             dispatch({
               type: "LOGIN_SUCCESS",
-              payload: { user: data.data.user, token },
+              payload: { user: response.data.user, token },
             });
           } else {
             localStorage.removeItem("smarteats_token");
@@ -149,25 +141,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await apiService.login(email, password);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
+      if (!response.success) {
+        throw new Error(response.message || "Login failed");
       }
 
-      localStorage.setItem("smarteats_token", data.token);
+      // Extract token from response data
+      const authToken =
+        (response.data as any)?.token || (response as any).token;
+      const userData = response.data?.user || response.data;
+
+      if (!authToken) {
+        throw new Error("No authentication token received");
+      }
+
+      localStorage.setItem("smarteats_token", authToken);
 
       dispatch({
         type: "LOGIN_SUCCESS",
-        payload: { user: data.data.user, token: data.token },
+        payload: { user: userData, token: authToken },
       });
     } catch (error) {
       dispatch({ type: "SET_LOADING", payload: false });
@@ -179,25 +172,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
+      const response = await apiService.register(userData);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Registration failed");
+      if (!response.success) {
+        throw new Error(response.message || "Registration failed");
       }
 
-      localStorage.setItem("smarteats_token", data.token);
+      // Extract token from response data
+      const authToken =
+        (response.data as any)?.token || (response as any).token;
+      const userInfo = response.data?.user || response.data;
+
+      if (!authToken) {
+        throw new Error("No authentication token received");
+      }
+
+      localStorage.setItem("smarteats_token", authToken);
 
       dispatch({
         type: "LOGIN_SUCCESS",
-        payload: { user: data.data.user, token: data.token },
+        payload: { user: userInfo, token: authToken },
       });
     } catch (error) {
       dispatch({ type: "SET_LOADING", payload: false });
@@ -207,19 +201,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      const token = localStorage.getItem("smarteats_token");
-
-      if (token && !token.startsWith("demo-jwt-token-")) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
+      // No need to call logout API for demo or if it fails
+      localStorage.removeItem("smarteats_token");
+      dispatch({ type: "LOGOUT" });
     } catch (error) {
       console.error("Logout error:", error);
-    } finally {
+      // Force logout even if API call fails
       localStorage.removeItem("smarteats_token");
       dispatch({ type: "LOGOUT" });
     }
@@ -231,27 +218,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!token || token.startsWith("demo-jwt-token-")) {
         if (state.user) {
-          const updatedUser = { ...state.user, ...userData };
           dispatch({ type: "UPDATE_USER", payload: userData });
         }
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        dispatch({ type: "UPDATE_USER", payload: data.data.user });
+      const response = await apiService.updateProfile(userData);
+      if (response.success && response.data) {
+        dispatch({ type: "UPDATE_USER", payload: response.data.user });
       }
     } catch (error) {
       console.error("Update user error:", error);
+      // Still update locally if API fails
+      if (state.user) {
+        dispatch({ type: "UPDATE_USER", payload: userData });
+      }
     }
   };
 
