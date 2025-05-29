@@ -1,0 +1,226 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* Import Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap");
+
+/* CSS Variables for theming */
+:root {
+  /* Light theme */
+  --toast-bg: #ffffff;
+  --toast-color: #1f2937;
+  --toast-border: #e5e7eb;
+
+  /* Custom scrollbar */
+  --scrollbar-width: 6px;
+  --scrollbar-track: #f1f5f9;
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+}
+
+[data-theme="dark"] {
+  /* Dark theme */
+  --toast-bg: #1f2937;
+  --toast-color: #f9fafb;
+  --toast-border: #374151;
+
+  /* Custom scrollbar for dark mode */
+  --scrollbar-track: #1f2937;
+  --scrollbar-thumb: #4b5563;
+  --scrollbar-thumb-hover: #6b7280;
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family:
+    "Inter",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: var(--scrollbar-width);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Focus styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800;
+}
+
+/* Button variants */
+.btn-primary {
+  @apply bg-primary-600 hover:bg-primary-700 focus:ring-primary-500 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus-ring;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 hover:bg-gray-300 focus:ring-gray-500 text-gray-900 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus-ring dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white;
+}
+
+.btn-outline {
+  @apply border border-gray-300 hover:bg-gray-50 focus:ring-gray-500 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus-ring dark:border-gray-600 dark:hover:bg-gray-700 dark:text-gray-300;
+}
+
+.btn-danger {
+  @apply bg-error-600 hover:bg-error-700 focus:ring-error-500 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus-ring;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white dark:bg-gray-800 rounded-xl shadow-soft border border-gray-200 dark:border-gray-700;
+}
+
+.card-header {
+  @apply px-6 py-4 border-b border-gray-200 dark:border-gray-700;
+}
+
+.card-body {
+  @apply px-6 py-4;
+}
+
+.card-footer {
+  @apply px-6 py-4 border-t border-gray-200 dark:border-gray-700;
+}
+
+/* Input styles */
+.input-field {
+  @apply block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500;
+}
+
+.input-error {
+  @apply border-error-300 focus:ring-error-500 focus:border-error-500 dark:border-error-600;
+}
+
+/* Loading animations */
+.loading-dots {
+  @apply inline-flex space-x-1;
+}
+
+.loading-dots>div {
+  @apply w-2 h-2 bg-current rounded-full animate-pulse;
+}
+
+.loading-dots>div:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.loading-dots>div:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+/* Gradient backgrounds */
+.gradient-primary {
+  background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, #d946ef 0%, #c026d3 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+/* Glass morphism effect */
+.glass {
+  @apply backdrop-blur-md bg-white/10 border border-white/20;
+}
+
+.glass-dark {
+  @apply backdrop-blur-md bg-gray-900/10 border border-gray-700/20;
+}
+
+/* Nutrition progress bars */
+.progress-bar {
+  @apply w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700;
+}
+
+.progress-fill {
+  @apply h-2 rounded-full transition-all duration-300 ease-out;
+}
+
+/* Mobile-first responsive utilities */
+.mobile-padding {
+  @apply px-4 sm:px-6 lg:px-8;
+}
+
+.mobile-margin {
+  @apply mx-4 sm:mx-6 lg:mx-8;
+}
+
+/* Animation utilities */
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card {
+    @apply border-2 border-gray-900 dark:border-white;
+  }
+
+  .btn-primary {
+    @apply border-2 border-white;
+  }
+}
+
+/* Dark mode improvements */
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
