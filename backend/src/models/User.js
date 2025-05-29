@@ -233,6 +233,52 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
+    weightHistory: [
+      {
+        date: {
+          type: String,
+          required: true,
+        },
+        weight: {
+          type: Number,
+          required: true,
+        },
+        timestamp: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
+
+    achievements: [
+      {
+        id: {
+          type: String,
+          required: true,
+        },
+        title: {
+          type: String,
+          required: true,
+        },
+        description: {
+          type: String,
+          required: true,
+        },
+        icon: {
+          type: String,
+          required: true,
+        },
+        unlockedAt: {
+          type: String,
+          default: null,
+        },
+        isUnlocked: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
+
     // Account status
     isActive: {
       type: Boolean,
