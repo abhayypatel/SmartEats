@@ -22,10 +22,6 @@ interface User {
   };
 }
 
-interface RegisteredUser extends User {
-  password: string;
-}
-
 interface AuthState {
   user: User | null;
   isLoading: boolean;
@@ -83,42 +79,62 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   }
 }
 
-const getRegisteredUsers = (): RegisteredUser[] => {
-  const users = localStorage.getItem("smarteats_users");
-  return users ? JSON.parse(users) : [];
-};
-
-const saveRegisteredUsers = (users: RegisteredUser[]) => {
-  localStorage.setItem("smarteats_users", JSON.stringify(users));
-};
-
-const findUserByEmail = (email: string): RegisteredUser | null => {
-  const users = getRegisteredUsers();
-  return users.find((user) => user.email === email) || null;
-};
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Check for existing token on mount
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem("smarteats_token");
-      const userData = localStorage.getItem("smarteats_current_user");
 
-      if (token && userData) {
+      if (token) {
         try {
-          const user = JSON.parse(userData);
-          dispatch({
-            type: "LOGIN_SUCCESS",
-            payload: { user, token },
+          if (token.startsWith("demo-jwt-token-")) {
+            const mockUser: User = {
+              id: "demo-user",
+              email: "demo@smarteats.com",
+              firstName: "Demo",
+              lastName: "User",
+              avatar: "",
+              goals: {
+                dailyCalories: 2000,
+                macros: {
+                  protein: 150,
+                  carbs: 250,
+                  fat: 67,
+                },
+              },
+            };
+            dispatch({
+              type: "LOGIN_SUCCESS",
+              payload: { user: mockUser, token },
+            });
+            return;
+          }
+
+          const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           });
+
+          if (response.ok) {
+            const data = await response.json();
+            dispatch({
+              type: "LOGIN_SUCCESS",
+              payload: { user: data.data.user, token },
+            });
+          } else {
+            localStorage.removeItem("smarteats_token");
+            dispatch({ type: "LOGOUT" });
+          }
         } catch (error) {
-          console.error("Error restoring auth state:", error);
+          console.error("Error checking auth:", error);
           localStorage.removeItem("smarteats_token");
-          localStorage.removeItem("smarteats_current_user");
           dispatch({ type: "LOGOUT" });
         }
       } else {
@@ -133,57 +149,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
-      // Check for demo account
-      if (email === "demo@smarteats.com" && password === "demo123") {
-        const mockToken = "demo-jwt-token-" + Date.now();
-        const mockUser: User = {
-          id: "demo-user",
-          email: "demo@smarteats.com",
-          firstName: "Demo",
-          lastName: "User",
-          avatar: "",
-          goals: {
-            dailyCalories: 2000,
-            macros: {
-              protein: 150,
-              carbs: 250,
-              fat: 67,
-            },
-          },
-        };
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-        localStorage.setItem("smarteats_token", mockToken);
-        localStorage.setItem(
-          "smarteats_current_user",
-          JSON.stringify(mockUser),
-        );
-        dispatch({
-          type: "LOGIN_SUCCESS",
-          payload: { user: mockUser, token: mockToken },
-        });
-        return;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login failed");
       }
 
-      // Check for registered users
-      const registeredUser = findUserByEmail(email);
-      if (registeredUser && registeredUser.password === password) {
-        const token = "user-jwt-token-" + Date.now();
-        const { password: _, ...userWithoutPassword } = registeredUser;
+      localStorage.setItem("smarteats_token", data.token);
 
-        localStorage.setItem("smarteats_token", token);
-        localStorage.setItem(
-          "smarteats_current_user",
-          JSON.stringify(userWithoutPassword),
-        );
-        dispatch({
-          type: "LOGIN_SUCCESS",
-          payload: { user: userWithoutPassword, token },
-        });
-        return;
-      }
-
-      // Invalid credentials
-      throw new Error("Invalid credentials");
+      dispatch({
+        type: "LOGIN_SUCCESS",
+        payload: { user: data.data.user, token: data.token },
+      });
     } catch (error) {
       dispatch({ type: "SET_LOADING", payload: false });
       throw error;
@@ -194,48 +179,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
 
-      // Check if email already exists
-      const existingUser = findUserByEmail(userData.email);
-      if (existingUser) {
-        throw new Error("An account with this email already exists");
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
       }
 
-      // Create new user
-      const newUser: RegisteredUser = {
-        id: "user-" + Date.now(),
-        email: userData.email,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        password: userData.password,
-        avatar: "",
-        goals: {
-          dailyCalories: 2000,
-          macros: {
-            protein: 150,
-            carbs: 250,
-            fat: 67,
-          },
-        },
-      };
-
-      // Save to registered users
-      const users = getRegisteredUsers();
-      users.push(newUser);
-      saveRegisteredUsers(users);
-
-      // Log the user in
-      const token = "user-jwt-token-" + Date.now();
-      const { password: _, ...userWithoutPassword } = newUser;
-
-      localStorage.setItem("smarteats_token", token);
-      localStorage.setItem(
-        "smarteats_current_user",
-        JSON.stringify(userWithoutPassword),
-      );
+      localStorage.setItem("smarteats_token", data.token);
 
       dispatch({
         type: "LOGIN_SUCCESS",
-        payload: { user: userWithoutPassword, token },
+        payload: { user: data.data.user, token: data.token },
       });
     } catch (error) {
       dispatch({ type: "SET_LOADING", payload: false });
@@ -243,20 +205,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("smarteats_token");
-    localStorage.removeItem("smarteats_current_user");
-    dispatch({ type: "LOGOUT" });
+  const logout = async () => {
+    try {
+      const token = localStorage.getItem("smarteats_token");
+
+      if (token && !token.startsWith("demo-jwt-token-")) {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      localStorage.removeItem("smarteats_token");
+      dispatch({ type: "LOGOUT" });
+    }
   };
 
-  const updateUser = (userData: Partial<User>) => {
-    if (state.user) {
-      const updatedUser = { ...state.user, ...userData };
-      localStorage.setItem(
-        "smarteats_current_user",
-        JSON.stringify(updatedUser),
-      );
-      dispatch({ type: "UPDATE_USER", payload: userData });
+  const updateUser = async (userData: Partial<User>) => {
+    try {
+      const token = localStorage.getItem("smarteats_token");
+
+      if (!token || token.startsWith("demo-jwt-token-")) {
+        if (state.user) {
+          const updatedUser = { ...state.user, ...userData };
+          dispatch({ type: "UPDATE_USER", payload: userData });
+        }
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        dispatch({ type: "UPDATE_USER", payload: data.data.user });
+      }
+    } catch (error) {
+      console.error("Update user error:", error);
     }
   };
 
